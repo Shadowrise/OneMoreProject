@@ -1,0 +1,6 @@
+@omp.Auth_HostAddress = http://localhost:5172
+
+GET {{omp.Auth_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
