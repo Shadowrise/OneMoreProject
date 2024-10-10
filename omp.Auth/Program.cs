@@ -1,9 +1,16 @@
+using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using omp.Auth.DB;
+using LoginRequest = omp.Auth.DTO.LoginRequest;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestDb"));
 
 var app = builder.Build();
 
@@ -16,29 +23,32 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+using(var scope = app.Services.CreateScope())
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.EnsureCreated();
+}
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/users", async (AppDbContext context, CancellationToken token) =>
     {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
+       var users = await context.Users.ToArrayAsync(token);
+       return Results.Ok(users);
     })
-    .WithName("GetWeatherForecast")
+    .WithName("GetUsers")
+    .WithOpenApi();
+
+app.MapPost("/login", async (LoginRequest request, AppDbContext context, CancellationToken token) =>
+    {
+        var user = await context.Users.FirstOrDefaultAsync(x => x.Email == request.Email, token);
+        if (user == null)
+        {
+            return Results.BadRequest();
+        }
+        
+        var jwt = Guid.NewGuid().ToString();
+        return Results.Ok(jwt);
+    })
+    .WithName("Login")
     .WithOpenApi();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int) (TemperatureC / 0.5556);
-}

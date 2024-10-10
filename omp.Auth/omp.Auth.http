@@ -1,6 +1,14 @@
-@omp.Auth_HostAddress = http://localhost:5172
+@Auth_HostAddress = http://localhost:5172
 
-GET {{omp.Auth_HostAddress}}/weatherforecast/
+GET {{Auth_HostAddress}}/users
 Accept: application/json
 
 ###
+
+POST {{Auth_HostAddress}}/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "Email": "slava@mail.com"
+}
